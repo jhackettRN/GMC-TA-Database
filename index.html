@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Therapeutic Expertise Repository</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FlexSearch/0.7.43/flexsearch.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -659,7 +659,6 @@
         // Application state
         let allData = {};
         let flatData = [];
-        let fuse = null;
         let currentCategory = 'all';
         let currentView = 'grid';
 
@@ -762,125 +761,39 @@
             updateCounts();
         }
 
-        // Initialize Fuse.js for fuzzy search
+        // Initialize FlexSearch index
+        let searchIndex = null;
+        
         function initFuse() {
-            const keys = [
-                { name: 'diseaseState', weight: 2 },
-                { name: 'indication', weight: 2 },
-                { name: 'therapeuticArea', weight: 2 },
-                { name: 'drugName', weight: 1.5 },
-                { name: 'brand', weight: 1.5 },
-                { name: 'drugMoa', weight: 1.5 },
-                { name: 'drugNameMoa', weight: 1.5 },
-                { name: 'client', weight: 1 },
-                { name: 'company', weight: 1 },
-                { name: 'person', weight: 1 },
-                { name: 'name', weight: 1 },
-                { name: 'scopeOfWork', weight: 0.5 },
-                { name: 'experience', weight: 0.5 },
-                { name: 'previousAgency', weight: 0.5 },
-                { name: 'academicBackground', weight: 0.5 }
-            ];
-
-            fuse = new Fuse(flatData, {
-                keys: keys,
-                threshold: 0.2,
-                distance: 50,
-                ignoreLocation: false,
-                includeMatches: true,
-                includeScore: true,
-                minMatchCharLength: 3,
-                shouldSort: true
-            });
-        }
-
-        // Custom sequential search - letters must appear in order
-        function sequentialSearch(query) {
-            const q = query.toLowerCase();
-            const results = [];
-            
-            const searchFields = [
-                { key: 'diseaseState', weight: 2 },
-                { key: 'indication', weight: 2 },
-                { key: 'therapeuticArea', weight: 2 },
-                { key: 'drugName', weight: 1.5 },
-                { key: 'brand', weight: 1.5 },
-                { key: 'drugMoa', weight: 1.5 },
-                { key: 'drugNameMoa', weight: 1.5 },
-                { key: 'client', weight: 1 },
-                { key: 'company', weight: 1 },
-                { key: 'person', weight: 1 },
-                { key: 'name', weight: 1 },
-                { key: 'scopeOfWork', weight: 0.5 },
-                { key: 'experience', weight: 0.5 },
-                { key: 'previousAgency', weight: 0.5 },
-                { key: 'academicBackground', weight: 0.5 }
-            ];
-
-            flatData.forEach(item => {
-                let bestScore = 0;
-                let matchedField = null;
-
-                searchFields.forEach(({ key, weight }) => {
-                    const value = item[key];
-                    if (!value) return;
-                    
-                    const text = String(value).toLowerCase();
-                    const score = getSequentialMatchScore(q, text);
-                    
-                    if (score > 0) {
-                        const weightedScore = score * weight;
-                        if (weightedScore > bestScore) {
-                            bestScore = weightedScore;
-                            matchedField = key;
-                        }
-                    }
-                });
-
-                if (bestScore > 0) {
-                    results.push({ item, score: bestScore, matchedField });
-                }
+            searchIndex = new FlexSearch.Document({
+                document: {
+                    id: 'id',
+                    index: [
+                        'diseaseState',
+                        'indication', 
+                        'therapeuticArea',
+                        'drugName',
+                        'brand',
+                        'drugMoa',
+                        'drugNameMoa',
+                        'client',
+                        'company',
+                        'person',
+                        'name',
+                        'scopeOfWork',
+                        'experience',
+                        'previousAgency',
+                        'academicBackground'
+                    ]
+                },
+                tokenize: 'forward',
+                resolution: 9,
+                cache: true
             });
 
-            // Sort by score descending
-            results.sort((a, b) => b.score - a.score);
-            return results.map(r => ({ ...r.item, _score: r.score }));
-        }
-
-        // Score sequential character matches
-        function getSequentialMatchScore(query, text) {
-            // Exact substring match gets highest score
-            if (text.includes(query)) {
-                // Bonus for word-start match
-                const wordStartBonus = text.startsWith(query) || text.includes(' ' + query) ? 0.5 : 0;
-                return 2 + wordStartBonus;
-            }
-
-            // Check for sequential characters (fuzzy)
-            let qIdx = 0;
-            let consecutiveBonus = 0;
-            let lastMatchIdx = -2;
-            
-            for (let i = 0; i < text.length && qIdx < query.length; i++) {
-                if (text[i] === query[qIdx]) {
-                    // Bonus for consecutive matches
-                    if (i === lastMatchIdx + 1) {
-                        consecutiveBonus += 0.1;
-                    }
-                    lastMatchIdx = i;
-                    qIdx++;
-                }
-            }
-
-            // All query characters found in sequence
-            if (qIdx === query.length) {
-                // Base score + consecutive bonus, penalize if spread out
-                const spread = lastMatchIdx - (lastMatchIdx - query.length + 1);
-                const spreadPenalty = Math.max(0, (spread - query.length) * 0.05);
-                return 1 + consecutiveBonus - spreadPenalty;
-            }
-
-            return 0;
+            flatData.forEach((item, idx) => {
+                searchIndex.add({ ...item, id: idx });
+            });
         }
 
         // Populate filter dropdowns
@@ -948,8 +861,17 @@
 
             let results;
             if (searchQuery) {
-                // Use custom sequential search
-                results = sequentialSearch(searchQuery);
+                // FlexSearch returns array of {field, result: [ids]}
+                const searchResults = searchIndex.search(searchQuery, { limit: 500 });
+                
+                // Collect unique IDs from all field matches
+                const matchedIds = new Set();
+                searchResults.forEach(fieldResult => {
+                    fieldResult.result.forEach(id => matchedIds.add(id));
+                });
+                
+                // Map IDs back to items
+                results = Array.from(matchedIds).map(id => flatData[id]);
             } else {
                 results = [...flatData];
             }
