@@ -765,17 +765,34 @@
         // Initialize Fuse.js for fuzzy search
         function initFuse() {
             const keys = [
-                'client', 'brand', 'indication', 'scopeOfWork',
-                'diseaseState', 'company', 'drugName', 'drugMoa', 'experience', 'previousAgency',
-                'person', 'name', 'therapeuticArea', 'drugNameMoa', 'academicBackground'
+                { name: 'diseaseState', weight: 2 },
+                { name: 'indication', weight: 2 },
+                { name: 'therapeuticArea', weight: 2 },
+                { name: 'drugName', weight: 1.5 },
+                { name: 'brand', weight: 1.5 },
+                { name: 'drugMoa', weight: 1.5 },
+                { name: 'drugNameMoa', weight: 1.5 },
+                { name: 'client', weight: 1 },
+                { name: 'company', weight: 1 },
+                { name: 'person', weight: 1 },
+                { name: 'name', weight: 1 },
+                { name: 'scopeOfWork', weight: 0.5 },
+                { name: 'experience', weight: 0.5 },
+                { name: 'previousAgency', weight: 0.5 },
+                { name: 'academicBackground', weight: 0.5 }
             ];
 
             fuse = new Fuse(flatData, {
                 keys: keys,
-                threshold: 0.4,
-                ignoreLocation: true,
+                threshold: 0.25,
+                distance: 100,
+                ignoreLocation: false,
                 includeMatches: true,
-                minMatchCharLength: 2
+                includeScore: true,
+                minMatchCharLength: 3,
+                shouldSort: true,
+                findAllMatches: false,
+                useExtendedSearch: false
             });
         }
 
@@ -842,7 +859,16 @@
             const drugFilter = document.getElementById('filter-drug').value;
             const personFilter = document.getElementById('filter-person').value;
 
-            let results = searchQuery ? fuse.search(searchQuery).map(r => ({ ...r.item, _matches: r.matches })) : [...flatData];
+            let results;
+            if (searchQuery) {
+                const searchResults = fuse.search(searchQuery);
+                // Filter out weak matches (score closer to 1 is worse, closer to 0 is better)
+                results = searchResults
+                    .filter(r => r.score < 0.35)
+                    .map(r => ({ ...r.item, _matches: r.matches, _score: r.score }));
+            } else {
+                results = [...flatData];
+            }
 
             // Apply category filter
             if (currentCategory !== 'all') {
