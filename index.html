@@ -784,16 +784,103 @@
 
             fuse = new Fuse(flatData, {
                 keys: keys,
-                threshold: 0.25,
-                distance: 100,
+                threshold: 0.2,
+                distance: 50,
                 ignoreLocation: false,
                 includeMatches: true,
                 includeScore: true,
                 minMatchCharLength: 3,
-                shouldSort: true,
-                findAllMatches: false,
-                useExtendedSearch: false
+                shouldSort: true
             });
+        }
+
+        // Custom sequential search - letters must appear in order
+        function sequentialSearch(query) {
+            const q = query.toLowerCase();
+            const results = [];
+            
+            const searchFields = [
+                { key: 'diseaseState', weight: 2 },
+                { key: 'indication', weight: 2 },
+                { key: 'therapeuticArea', weight: 2 },
+                { key: 'drugName', weight: 1.5 },
+                { key: 'brand', weight: 1.5 },
+                { key: 'drugMoa', weight: 1.5 },
+                { key: 'drugNameMoa', weight: 1.5 },
+                { key: 'client', weight: 1 },
+                { key: 'company', weight: 1 },
+                { key: 'person', weight: 1 },
+                { key: 'name', weight: 1 },
+                { key: 'scopeOfWork', weight: 0.5 },
+                { key: 'experience', weight: 0.5 },
+                { key: 'previousAgency', weight: 0.5 },
+                { key: 'academicBackground', weight: 0.5 }
+            ];
+
+            flatData.forEach(item => {
+                let bestScore = 0;
+                let matchedField = null;
+
+                searchFields.forEach(({ key, weight }) => {
+                    const value = item[key];
+                    if (!value) return;
+                    
+                    const text = String(value).toLowerCase();
+                    const score = getSequentialMatchScore(q, text);
+                    
+                    if (score > 0) {
+                        const weightedScore = score * weight;
+                        if (weightedScore > bestScore) {
+                            bestScore = weightedScore;
+                            matchedField = key;
+                        }
+                    }
+                });
+
+                if (bestScore > 0) {
+                    results.push({ item, score: bestScore, matchedField });
+                }
+            });
+
+            // Sort by score descending
+            results.sort((a, b) => b.score - a.score);
+            return results.map(r => ({ ...r.item, _score: r.score }));
+        }
+
+        // Score sequential character matches
+        function getSequentialMatchScore(query, text) {
+            // Exact substring match gets highest score
+            if (text.includes(query)) {
+                // Bonus for word-start match
+                const wordStartBonus = text.startsWith(query) || text.includes(' ' + query) ? 0.5 : 0;
+                return 2 + wordStartBonus;
+            }
+
+            // Check for sequential characters (fuzzy)
+            let qIdx = 0;
+            let consecutiveBonus = 0;
+            let lastMatchIdx = -2;
+            
+            for (let i = 0; i < text.length && qIdx < query.length; i++) {
+                if (text[i] === query[qIdx]) {
+                    // Bonus for consecutive matches
+                    if (i === lastMatchIdx + 1) {
+                        consecutiveBonus += 0.1;
+                    }
+                    lastMatchIdx = i;
+                    qIdx++;
+                }
+            }
+
+            // All query characters found in sequence
+            if (qIdx === query.length) {
+                // Base score + consecutive bonus, penalize if spread out
+                const spread = lastMatchIdx - (lastMatchIdx - query.length + 1);
+                const spreadPenalty = Math.max(0, (spread - query.length) * 0.05);
+                return 1 + consecutiveBonus - spreadPenalty;
+            }
+
+            return 0;
         }
 
         // Populate filter dropdowns
@@ -861,11 +948,8 @@
 
             let results;
             if (searchQuery) {
-                const searchResults = fuse.search(searchQuery);
-                // Filter out weak matches (score closer to 1 is worse, closer to 0 is better)
-                results = searchResults
-                    .filter(r => r.score < 0.35)
-                    .map(r => ({ ...r.item, _matches: r.matches, _score: r.score }));
+                // Use custom sequential search
+                results = sequentialSearch(searchQuery);
             } else {
                 results = [...flatData];
             }
