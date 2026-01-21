@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Therapeutic Expertise Repository</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #111820;
+            --bg-card: #161d27;
+            --bg-hover: #1c2530;
+            --border: #2a3544;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-blue: #58a6ff;
+            --accent-cyan: #39d0d8;
+            --accent-green: #3fb950;
+            --accent-purple: #a371f7;
+            --accent-orange: #f0883e;
+            --accent-pink: #f778ba;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .logo-section h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+
+        .logo-section p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .upload-zone {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent-cyan);
+            background: rgba(57, 208, 216, 0.05);
+        }
+
+        .upload-zone svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent-cyan);
+        }
+
+        .upload-zone span {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .upload-zone strong {
+            color: var(--accent-cyan);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .search-section {
+            margin-bottom: 24px;
+        }
+
+        .search-bar {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 16px 20px 16px 52px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .search-bar input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(57, 208, 216, 0.1);
+        }
+
+        .search-bar svg {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: var(--text-muted);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .filter-tab {
+            padding: 8px 16px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-tab:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-cyan);
+        }
+
+        .filter-tab.active {
+            background: rgba(57, 208, 216, 0.1);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .filter-tab .count {
+            background: var(--bg-card);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .filter-tab.active .count {
+            background: rgba(57, 208, 216, 0.2);
+        }
+
+        .advanced-filters {
+            display: none;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            margin-bottom: 16px;
+        }
+
+        .advanced-filters.visible {
+            display: flex;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+        }
+
+        .toggle-filters {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            background: transparent;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-filters:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        .toggle-filters svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+
+        .results-count {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .results-count strong {
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+        }
+
+        .view-btn {
+            padding: 6px 10px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .view-btn:hover {
+            color: var(--text-secondary);
+        }
+
+        .view-btn.active {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+        }
+
+        .view-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .results-container {
+            display: grid;
+            gap: 12px;
+        }
+
+        .results-container.grid-view {
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        }
+
+        .results-container.list-view {
+            grid-template-columns: 1fr;
+        }
+
+        .result-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--card-accent, var(--accent-cyan)), transparent);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .result-card:hover {
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .result-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-category {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            background: rgba(57, 208, 216, 0.1);
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .card-category.mc5 { background: rgba(88, 166, 255, 0.1); color: var(--accent-blue); }
+        .card-category.outside { background: rgba(163, 113, 247, 0.1); color: var(--accent-purple); }
+        .card-category.academic { background: rgba(63, 185, 80, 0.1); color: var(--accent-green); }
+        .card-category.asd { background: rgba(240, 136, 62, 0.1); color: var(--accent-orange); }
+        .card-category.writer { background: rgba(247, 120, 186, 0.1); color: var(--accent-pink); }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .card-title mark {
+            background: rgba(57, 208, 216, 0.3);
+            color: inherit;
+            padding: 0 2px;
+            border-radius: 2px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .card-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .meta-tag svg {
+            width: 12px;
+            height: 12px;
+            opacity: 0.7;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 80px 40px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px dashed var(--border);
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .loading-spinner {
+            display: none;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .loading-spinner.visible {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-cyan);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--accent-green);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 14px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toast.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast svg {
+            width: 20px;
+            height: 20px;
+            color: var(--accent-green);
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 16px;
+            }
+
+            .header-top {
+                flex-direction: column;
+            }
+
+            .upload-zone {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .results-container.grid-view {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-group {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-top">
+                <div class="logo-section">
+                    <h1>Therapeutic Expertise Repository</h1>
+                    <p>Search across disease states, drugs, indications, and team expertise</p>
+                </div>
+                <div class="upload-zone" id="upload-zone">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <span><strong>Drop Excel</strong> to update data</span>
+                    <input type="file" id="file-input" accept=".xlsx,.xls">
+                </div>
+            </div>
+        </header>
+
+        <section class="search-section">
+            <div class="search-bar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" id="search-input" placeholder="Fuzzy search... Try 'diabetes', 'oncology', 'manuscript', or any keyword">
+            </div>
+
+            <div class="filter-tabs" id="filter-tabs">
+                <button class="filter-tab active" data-category="all">
+                    All Results <span class="count" id="count-all">0</span>
+                </button>
+                <button class="filter-tab" data-category="mc5Experience">
+                    MC5 Experience <span class="count" id="count-mc5">0</span>
+                </button>
+                <button class="filter-tab" data-category="outsideAgencyExperience">
+                    Outside Agency <span class="count" id="count-outside">0</span>
+                </button>
+                <button class="filter-tab" data-category="academicExperience">
+                    Academic <span class="count" id="count-academic">0</span>
+                </button>
+                <button class="filter-tab" data-category="asdSdExperience">
+                    ASD/SD <span class="count" id="count-asd">0</span>
+                </button>
+                <button class="filter-tab" data-category="writerExperience">
+                    Writer Experience <span class="count" id="count-writer">0</span>
+                </button>
+                <button class="toggle-filters" id="toggle-filters">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                    </svg>
+                    Filters
+                </button>
+            </div>
+
+            <div class="advanced-filters" id="advanced-filters">
+                <div class="filter-group">
+                    <label>Disease State</label>
+                    <select id="filter-disease">
+                        <option value="">All Disease States</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Company / Client</label>
+                    <select id="filter-company">
+                        <option value="">All Companies</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Drug / Brand</label>
+                    <select id="filter-drug">
+                        <option value="">All Drugs</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Person / Writer</label>
+                    <select id="filter-person">
+                        <option value="">All People</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <div class="results-header">
+            <span class="results-count">
+                Showing <strong id="visible-count">0</strong> of <strong id="total-count">0</strong> records
+            </span>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="grid" title="Grid view">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                </button>
+                <button class="view-btn" data-view="list" title="List view">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"/>
+                        <line x1="8" y1="12" x2="21" y2="12"/>
+                        <line x1="8" y1="18" x2="21" y2="18"/>
+                        <line x1="3" y1="6" x2="3.01" y2="6"/>
+                        <line x1="3" y1="12" x2="3.01" y2="12"/>
+                        <line x1="3" y1="18" x2="3.01" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="loading-spinner" id="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <div class="results-container grid-view" id="results-container"></div>
+
+        <div class="toast" id="toast">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <span id="toast-message">Data updated successfully!</span>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let allData = {};
+        let flatData = [];
+        let fuse = null;
+        let currentCategory = 'all';
+        let currentView = 'grid';
+
+        // Category configurations
+        const categoryConfig = {
+            mc5Experience: {
+                label: 'MC5 Experience',
+                class: 'mc5',
+                getTitle: (item) => item.brand || item.client,
+                getSubtitle: (item) => item.indication,
+                getMeta: (item) => [
+                    { icon: 'building', text: item.client },
+                    { icon: 'clipboard', text: item.scopeOfWork }
+                ].filter(m => m.text)
+            },
+            outsideAgencyExperience: {
+                label: 'Outside Agency',
+                class: 'outside',
+                getTitle: (item) => item.drugName || item.diseaseState,
+                getSubtitle: (item) => item.diseaseState !== item.drugName ? item.diseaseState : item.drugMoa,
+                getMeta: (item) => [
+                    { icon: 'building', text: item.company },
+                    { icon: 'zap', text: item.drugMoa },
+                    { icon: 'briefcase', text: item.previousAgency }
+                ].filter(m => m.text)
+            },
+            academicExperience: {
+                label: 'Academic',
+                class: 'academic',
+                getTitle: (item) => item.diseaseState,
+                getSubtitle: (item) => item.drugName,
+                getMeta: (item) => [
+                    { icon: 'zap', text: item.drugMoa },
+                    { icon: 'clock', text: item.experience }
+                ].filter(m => m.text)
+            },
+            asdSdExperience: {
+                label: 'ASD/SD',
+                class: 'asd',
+                getTitle: (item) => item.diseaseState,
+                getSubtitle: (item) => item.drugName,
+                getMeta: (item) => [
+                    { icon: 'user', text: item.person },
+                    { icon: 'zap', text: item.drugMoa },
+                    { icon: 'clipboard', text: item.experience }
+                ].filter(m => m.text)
+            },
+            writerExperience: {
+                label: 'Writer',
+                class: 'writer',
+                getTitle: (item) => item.therapeuticArea,
+                getSubtitle: (item) => item.drugNameMoa,
+                getMeta: (item) => [
+                    { icon: 'user', text: item.name },
+                    { icon: 'book', text: item.academicBackground },
+                    { icon: 'calendar', text: item.startDate }
+                ].filter(m => m.text)
+            }
+        };
+
+        // Icons for meta tags
+        const icons = {
+            building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>',
+            user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+            zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+            clipboard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>',
+            clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+            book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>',
+            calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>',
+            briefcase: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>'
+        };
+
+        // Initialize application
+        async function init() {
+            showLoading(true);
+            try {
+                const response = await fetch('/api/data');
+                allData = await response.json();
+                processData();
+                initFuse();
+                populateFilters();
+                renderResults();
+            } catch (error) {
+                console.error('Failed to load data:', error);
+            }
+            showLoading(false);
+            setupEventListeners();
+        }
+
+        // Process data into flat array with category tags
+        function processData() {
+            flatData = [];
+            for (const [category, items] of Object.entries(allData)) {
+                if (Array.isArray(items)) {
+                    items.forEach(item => {
+                        flatData.push({ ...item, _category: category });
+                    });
+                }
+            }
+            updateCounts();
+        }
+
+        // Initialize Fuse.js for fuzzy search
+        function initFuse() {
+            const keys = [
+                'client', 'brand', 'indication', 'scopeOfWork',
+                'diseaseState', 'company', 'drugName', 'drugMoa', 'experience', 'previousAgency',
+                'person', 'name', 'therapeuticArea', 'drugNameMoa', 'academicBackground'
+            ];
+
+            fuse = new Fuse(flatData, {
+                keys: keys,
+                threshold: 0.4,
+                ignoreLocation: true,
+                includeMatches: true,
+                minMatchCharLength: 2
+            });
+        }
+
+        // Populate filter dropdowns
+        function populateFilters() {
+            const diseases = new Set();
+            const companies = new Set();
+            const drugs = new Set();
+            const people = new Set();
+
+            flatData.forEach(item => {
+                if (item.diseaseState) diseases.add(item.diseaseState);
+                if (item.indication) diseases.add(item.indication);
+                if (item.therapeuticArea) diseases.add(item.therapeuticArea);
+                if (item.company) companies.add(item.company);
+                if (item.client) companies.add(item.client);
+                if (item.drugName) drugs.add(item.drugName);
+                if (item.brand) drugs.add(item.brand);
+                if (item.person) people.add(item.person);
+                if (item.name) people.add(item.name);
+            });
+
+            populateSelect('filter-disease', [...diseases].sort());
+            populateSelect('filter-company', [...companies].sort());
+            populateSelect('filter-drug', [...drugs].sort());
+            populateSelect('filter-person', [...people].sort());
+        }
+
+        function populateSelect(id, options) {
+            const select = document.getElementById(id);
+            const currentValue = select.value;
+            const firstOption = select.options[0].outerHTML;
+            select.innerHTML = firstOption;
+            options.forEach(opt => {
+                if (opt && opt.trim()) {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.textContent = opt.length > 50 ? opt.substring(0, 50) + '...' : opt;
+                    select.appendChild(option);
+                }
+            });
+            select.value = currentValue;
+        }
+
+        // Update counts in tabs
+        function updateCounts() {
+            const counts = { all: flatData.length };
+            for (const category of Object.keys(categoryConfig)) {
+                counts[category] = flatData.filter(d => d._category === category).length;
+            }
+            document.getElementById('count-all').textContent = counts.all;
+            document.getElementById('count-mc5').textContent = counts.mc5Experience || 0;
+            document.getElementById('count-outside').textContent = counts.outsideAgencyExperience || 0;
+            document.getElementById('count-academic').textContent = counts.academicExperience || 0;
+            document.getElementById('count-asd').textContent = counts.asdSdExperience || 0;
+            document.getElementById('count-writer').textContent = counts.writerExperience || 0;
+        }
+
+        // Get filtered and searched results
+        function getFilteredResults() {
+            const searchQuery = document.getElementById('search-input').value.trim();
+            const diseaseFilter = document.getElementById('filter-disease').value;
+            const companyFilter = document.getElementById('filter-company').value;
+            const drugFilter = document.getElementById('filter-drug').value;
+            const personFilter = document.getElementById('filter-person').value;
+
+            let results = searchQuery ? fuse.search(searchQuery).map(r => ({ ...r.item, _matches: r.matches })) : [...flatData];
+
+            // Apply category filter
+            if (currentCategory !== 'all') {
+                results = results.filter(item => item._category === currentCategory);
+            }
+
+            // Apply dropdown filters
+            if (diseaseFilter) {
+                results = results.filter(item =>
+                    item.diseaseState === diseaseFilter ||
+                    item.indication === diseaseFilter ||
+                    item.therapeuticArea === diseaseFilter
+                );
+            }
+            if (companyFilter) {
+                results = results.filter(item =>
+                    item.company === companyFilter ||
+                    item.client === companyFilter
+                );
+            }
+            if (drugFilter) {
+                results = results.filter(item =>
+                    item.drugName === drugFilter ||
+                    item.brand === drugFilter
+                );
+            }
+            if (personFilter) {
+                results = results.filter(item =>
+                    item.person === personFilter ||
+                    item.name === personFilter
+                );
+            }
+
+            return results;
+        }
+
+        // Render results
+        function renderResults() {
+            const container = document.getElementById('results-container');
+            const results = getFilteredResults();
+
+            document.getElementById('visible-count').textContent = results.length;
+            document.getElementById('total-count').textContent = flatData.length;
+
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.3-4.3"/>
+                            <path d="M8 11h6"/>
+                        </svg>
+                        <h3>No results found</h3>
+                        <p>Try adjusting your search or filters</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = results.slice(0, 200).map(item => renderCard(item)).join('');
+        }
+
+        // Render individual card
+        function renderCard(item) {
+            const config = categoryConfig[item._category];
+            if (!config) return '';
+
+            const title = config.getTitle(item) || 'Untitled';
+            const subtitle = config.getSubtitle(item);
+            const meta = config.getMeta(item);
+
+            const metaHtml = meta.map(m => `
+                <span class="meta-tag">
+                    ${icons[m.icon] || ''}
+                    ${escapeHtml(m.text.length > 40 ? m.text.substring(0, 40) + '...' : m.text)}
+                </span>
+            `).join('');
+
+            return `
+                <div class="result-card" style="--card-accent: var(--accent-${config.class === 'mc5' ? 'blue' : config.class === 'outside' ? 'purple' : config.class === 'academic' ? 'green' : config.class === 'asd' ? 'orange' : 'pink'})">
+                    <span class="card-category ${config.class}">${config.label}</span>
+                    <h3 class="card-title">${escapeHtml(title)}</h3>
+                    ${subtitle ? `<p class="card-subtitle">${escapeHtml(subtitle)}</p>` : ''}
+                    ${meta.length > 0 ? `<div class="card-meta">${metaHtml}</div>` : ''}
+                </div>
+            `;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Show/hide loading
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('visible', show);
+            document.getElementById('results-container').style.display = show ? 'none' : 'grid';
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('visible');
+            setTimeout(() => toast.classList.remove('visible'), 3000);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Search input
+            let searchTimeout;
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => renderResults(), 150);
+            });
+
+            // Category tabs
+            document.getElementById('filter-tabs').addEventListener('click', (e) => {
+                const tab = e.target.closest('.filter-tab');
+                if (tab) {
+                    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentCategory = tab.dataset.category;
+                    renderResults();
+                }
+            });
+
+            // Toggle advanced filters
+            document.getElementById('toggle-filters').addEventListener('click', () => {
+                document.getElementById('advanced-filters').classList.toggle('visible');
+            });
+
+            // Filter dropdowns
+            ['filter-disease', 'filter-company', 'filter-drug', 'filter-person'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => renderResults());
+            });
+
+            // View toggle
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const container = document.getElementById('results-container');
+                    container.classList.remove('grid-view', 'list-view');
+                    container.classList.add(`${btn.dataset.view}-view`);
+                });
+            });
+
+            // File upload
+            const uploadZone = document.getElementById('upload-zone');
+            const fileInput = document.getElementById('file-input');
+
+            uploadZone.addEventListener('click', () => fileInput.click());
+
+            uploadZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadZone.classList.add('dragover');
+            });
+
+            uploadZone.addEventListener('dragleave', () => {
+                uploadZone.classList.remove('dragover');
+            });
+
+            uploadZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadZone.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file) handleFileUpload(file);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleFileUpload(file);
+            });
+        }
+
+        // Handle file upload and parse Excel
+        async function handleFileUpload(file) {
+            if (!file.name.match(/\.xlsx?$/i)) {
+                showToast('Please upload an Excel file (.xlsx)');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+
+                const newData = {};
+
+                // Process each sheet
+                workbook.SheetNames.forEach(sheetName => {
+                    const sheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                    if (sheetName === 'MC5 Experience') {
+                        newData.mc5Experience = jsonData
+                            .filter(row => row.CLIENT && row.BRAND)
+                            .map(row => ({
+                                client: String(row.CLIENT || '').trim(),
+                                brand: String(row.BRAND || '').trim(),
+                                indication: String(row.INDICATION || '').trim(),
+                                scopeOfWork: String(row['SCOPE OF WORK'] || '').trim()
+                            }));
+                    } else if (sheetName === 'Outside Agency Experience') {
+                        newData.outsideAgencyExperience = jsonData
+                            .filter(row => row['DISEASE STATE'] && !String(row['DISEASE STATE']).includes('[['))
+                            .map(row => ({
+                                diseaseState: String(row['DISEASE STATE'] || '').trim(),
+                                company: String(row['COMPANY/CLIENT'] || '').trim(),
+                                drugName: String(row['DRUG NAME'] || '').trim(),
+                                drugMoa: String(row['DRUG MOA'] || '').trim(),
+                                experience: String(row['EXPERIENCE (type of outputs)'] || '').trim(),
+                                previousAgency: String(row['Previous Agency'] || '').trim()
+                            }));
+                    } else if (sheetName === 'Academic Experience') {
+                        newData.academicExperience = jsonData
+                            .filter(row => row['DISEASE STATE'])
+                            .map(row => ({
+                                diseaseState: String(row['DISEASE STATE'] || '').trim(),
+                                drugName: String(row['DRUG NAME'] || '').trim(),
+                                drugMoa: String(row['DRUG MOA'] || '').trim(),
+                                experience: String(row.EXPERIENCE || '').trim()
+                            }));
+                    } else if (sheetName === 'ASD SD experience at MC5') {
+                        let currentPerson = '';
+                        newData.asdSdExperience = [];
+                        jsonData.forEach(row => {
+                            if (row['SD/ASD']) currentPerson = String(row['SD/ASD']).trim();
+                            if (row['DISEASE STATE']) {
+                                newData.asdSdExperience.push({
+                                    person: currentPerson,
+                                    diseaseState: String(row['DISEASE STATE'] || '').trim(),
+                                    drugName: String(row['DRUG NAME'] || '').trim(),
+                                    drugMoa: String(row['DRUG MOA'] || '').trim(),
+                                    experience: String(row['EXPERIENCE (output types)'] || '').trim()
+                                });
+                            }
+                        });
+                    } else if (sheetName === 'writer experience') {
+                        let currentName = '';
+                        let currentDate = '';
+                        newData.writerExperience = [];
+                        jsonData.forEach(row => {
+                            if (row.Name) {
+                                currentName = String(row.Name).trim();
+                                currentDate = row['start date'] ? String(row['start date']).substring(0, 10) : '';
+                            }
+                            if (row['Therapeutic area experience (agency)']) {
+                                newData.writerExperience.push({
+                                    name: currentName,
+                                    startDate: currentDate,
+                                    therapeuticArea: String(row['Therapeutic area experience (agency)'] || '').trim(),
+                                    drugNameMoa: String(row['Drug name and MOA'] || '').trim(),
+                                    academicBackground: String(row['Academic background'] || '').trim()
+                                });
+                            }
+                        });
+                    }
+                });
+
+                // Update application state
+                allData = newData;
+                processData();
+                initFuse();
+                populateFilters();
+                renderResults();
+                showToast(`Data updated: ${flatData.length} records loaded`);
+
+            } catch (error) {
+                console.error('Error parsing Excel:', error);
+                showToast('Error parsing file. Please check the format.');
+            }
+
+            showLoading(false);
+        }
+
+        // Start application
+        init();
+    </script>
+</body>
+</html>
