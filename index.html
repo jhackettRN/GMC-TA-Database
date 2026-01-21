@@ -763,14 +763,14 @@
 
         // Initialize FlexSearch index
         let searchIndex = null;
-        
+
         function initFuse() {
             searchIndex = new FlexSearch.Document({
                 document: {
                     id: 'id',
                     index: [
                         'diseaseState',
-                        'indication', 
+                        'indication',
                         'therapeuticArea',
                         'drugName',
                         'brand',
@@ -786,9 +786,10 @@
                         'academicBackground'
                     ]
                 },
-                tokenize: 'forward',
+                tokenize: 'full',    // Changed from 'forward' to 'full' for substring matching
                 resolution: 9,
-                cache: true
+                cache: true,
+                matcher: 'simple'    // Enable simple matching for better fuzzy results
             });
 
             flatData.forEach((item, idx) => {
